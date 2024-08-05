@@ -1,32 +1,42 @@
+import os
+import numpy as np
+import pandas as pd
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.models import load_model
-import os
 
-# Define the directory where models are saved
-model_dir = './models'  # Adjust this if your models are in a different directory
-
-# Load models
+model_dir = './models'
+test_dir = './data/test'
 models = [load_model(os.path.join(model_dir, f'path_to_my_model_fold_{i}.h5')) for i in range(1, 6)]
-
-# Setup the ImageDataGenerator for the test set
 datagen = ImageDataGenerator(rescale=1./255)
 
-# Assuming your test images are in a subdirectory called 'images' inside the 'test' folder
-test_dir = './data/test/images'  
-test_generator = datagen.flow_from_directory(
-    os.path.dirname(test_dir),  # This points to './data/test', the parent directory of 'images'
+image_files = [f for f in os.listdir(test_dir) if f.endswith('.tif')]
+df_test = pd.DataFrame({
+    'filename': image_files
+})
+
+print(f"Total images found: {len(image_files)}")
+print("Sample image names:", image_files[:5])
+
+test_generator = datagen.flow_from_dataframe(
+    dataframe=df_test,
+    directory=test_dir,
+    x_col='filename',
+    y_col=None,
     target_size=(96, 96),
     batch_size=32,
-    class_mode=None,  # No labels are provided
-    shuffle=False  # Important for maintaining order
+    class_mode=None,
+    shuffle=False
 )
 
-# Verify the setup
-if test_generator.n > 0:
-    print(f"Found {test_generator.n} images for testing.")
-    for model in models:
-        # Predict on the entire test data
-        predictions = model.predict(test_generator, verbose=1)
-        print("Predictions made successfully.")
-else:
-    print("No images found for testing. Check the directory path and contents.")
+predictions = [model.predict(test_generator, verbose=1) for model in models]
+average_predictions = np.mean(predictions, axis=0).flatten()
+
+submission_df = pd.DataFrame({
+    'id': [os.path.basename(path).split('.')[0] for path in test_generator.filenames],  
+    'label': average_predictions
+})
+
+submission_df['label'] = submission_df['label'].apply(lambda x: format(x, '.3f'))
+
+submission_df.to_csv('submission.csv', index=False)
+print("Predictions saved to 'submission.csv'")

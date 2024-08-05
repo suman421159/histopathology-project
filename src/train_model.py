@@ -1,7 +1,7 @@
 from keras.applications.inception_v3 import InceptionV3
 from keras.layers import Input, GlobalAveragePooling2D, Dense
 from keras.models import Model
-from livelossplot import PlotLossesKeras
+from keras.callbacks import ModelCheckpoint
 from sklearn.model_selection import StratifiedKFold
 import pandas as pd
 import numpy as np
@@ -54,6 +54,14 @@ if __name__ == '__main__':
         )
 
         model = create_model((96, 96, 3))
+        
+        # Setup checkpointing
+        checkpoint_callback = ModelCheckpoint(
+            f'path_to_my_model_fold_{fold_var}.h5',
+            monitor='val_loss',
+            save_best_only=True,
+            verbose=1
+        )
 
         print(f"Training for fold {fold_var} ...")
         history = model.fit(
@@ -62,7 +70,7 @@ if __name__ == '__main__':
             validation_data=validation_generator,
             validation_steps=50,
             epochs=10,
-            callbacks=[PlotLossesKeras()]
+            callbacks=[checkpoint_callback]  
         )
-        model.save(f'path_to_my_model_fold_{fold_var}.h5')
+        
         fold_var += 1

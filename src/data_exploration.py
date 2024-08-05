@@ -8,6 +8,7 @@ def load_data(data_dir):
     train_dir = os.path.join(data_dir, 'train')
     labels_csv = os.path.join(data_dir, 'train_labels.csv')
     labels = pd.read_csv(labels_csv)
+    labels['path'] = labels['id'].apply(lambda x: os.path.join(train_dir, f"{x}.tif"))
     return train_dir, labels
 
 def visualize_data(train_dir, labels):
@@ -17,9 +18,8 @@ def visualize_data(train_dir, labels):
 
     fig, axes = plt.subplots(1, 2, figsize=(10, 5))
     for i, label in enumerate(labels['label'].unique()):
-        sample_file = labels[labels['label'] == label]['id'].iloc[0] + '.tif'
-        img_path = os.path.join(train_dir, sample_file)
-        img = Image.open(img_path)
+        sample_file = labels[labels['label'] == label].iloc[0]['path']
+        img = Image.open(sample_file)
         axes[i].imshow(img)
         axes[i].set_title(f'Sample Image: Label {label}')
         axes[i].axis('off')
